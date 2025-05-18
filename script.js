@@ -1,11 +1,10 @@
-// Full script.js with all risk categories and scoring logic
+// Full vendor risk tool with all question logic, correct scoring, and Google Sheet integration
 
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("risk-form");
   const container = document.getElementById("questions-container");
 
   const riskAreas = [
-    // SAFETY RISK
     {
       title: "Safety Risk",
       weight: 0.5,
@@ -26,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "If this vendor’s safety-critical service fails, how easily can Alaska continue operations?"
       ]
     },
-    // COMPLIANCE RISK
     {
       title: "Compliance Risk",
       weight: 0.15,
@@ -45,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "How reliable has the vendor been with pilot training records or certification tracking?"
       ]
     },
-    // OPERATIONAL RISK
     {
       title: "Operational Risk",
       weight: 0.15,
@@ -66,7 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "How reliably has this vendor delivered load planning and balance docs?"
       ]
     },
-    // IT & CYBERSECURITY RISK
     {
       title: "IT & Cyber Risk",
       weight: 0.1,
@@ -85,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "How reliably do they send compliance/audit/maintenance data?"
       ]
     },
-    // FINANCIAL RISK
     {
       title: "Financial Risk",
       weight: 0.05,
@@ -104,7 +99,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "Have they failed to deliver large financial/capital projects on time?"
       ]
     },
-    // COMPETITIVE RISK
     {
       title: "Competitive Risk",
       weight: 0.05,
@@ -159,19 +153,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const rows = document.createElement("div");
     rows.className = "question-row-container";
 
-    for (let i = 0; i < area.impact.length; i++) {
+    for (let i = 0; i < Math.max(area.impact.length, area.likelihood.length); i++) {
       const row = document.createElement("div");
       row.className = "question-row";
 
       const impactWrapper = document.createElement("div");
       impactWrapper.className = "question-box";
-      impactWrapper.innerHTML = `<label>${i + 1}. ${area.impact[i]}</label>`;
-      impactWrapper.appendChild(createRadioGroup(area.title + "-impact", i));
+      if (area.impact[i]) {
+        impactWrapper.innerHTML = `<label>${i + 1}. ${area.impact[i]}</label>`;
+        impactWrapper.appendChild(createRadioGroup(area.title + "-impact", i));
+      }
 
       const likelihoodWrapper = document.createElement("div");
       likelihoodWrapper.className = "question-box";
-      likelihoodWrapper.innerHTML = `<label>${i + 1}. ${area.likelihood[i]}</label>`;
-      likelihoodWrapper.appendChild(createSelectGroup(area.title + "-likelihood", i));
+      if (area.likelihood[i]) {
+        likelihoodWrapper.innerHTML = `<label>${i + 1}. ${area.likelihood[i]}</label>`;
+        likelihoodWrapper.appendChild(createSelectGroup(area.title + "-likelihood", i));
+      }
 
       row.appendChild(impactWrapper);
       row.appendChild(likelihoodWrapper);
@@ -194,64 +192,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
       for (let i = 0; i < area.impact.length; i++) {
         const impactAnswer = document.querySelector(`input[name='${area.title}-impact-${i}']:checked`);
-        const likelihoodAnswer = document.querySelector(`select[name='${area.title}-likelihood-${i}']`).value;
-
-        if (impactAnswer && impactAnswer.value === "yes") {
-          impactYesCount++;
-        }
-        if (likelihoodAnswer) {
-          likelihoodSum += parseInt(likelihoodAnswer);
-        }
+        if (impactAnswer && impactAnswer.value === "yes") impactYesCount++;
       }
 
-      const avgImpact = (impactYesCount / area.impact.length) * 5;
-      const avgLikelihood = likelihoodSum / area.likelihood.length;
+      for (let i = 0; i < area.likelihood.length; i++) {
+        const likelihoodAnswer = document.querySelector(`select[name='${area.title}-likelihood-${i}']`).value;
+        if (likelihoodAnswer) likelihoodSum += parseInt(likelihoodAnswer);
+      }
 
-      totalImpactScore += avgImpact * area.weight;
-      totalLikelihoodScore += avgLikelihood * area.weight;
+      const impactPercent = impactYesCount / area.impact.length;
+      const likelihoodAvg = likelihoodSum / area.likelihood.length / 5;
+
+      totalImpactScore += impactPercent * 5 * area.weight;
+      totalLikelihoodScore += likelihoodAvg * 5 * area.weight;
     });
 
-    const riskPercentImpact = (totalImpactScore / 5) * 100;
-    const riskPercentLikelihood = (totalLikelihoodScore / 5) * 100;
-    const averagePercent = (riskPercentImpact + riskPercentLikelihood) / 2;
+    const riskScore = totalImpactScore * totalLikelihoodScore;
+    const riskPercent = (riskScore / 25) * 100;
 
     let criticality = "🟢 Low Risk";
-    if (averagePercent >= 60) criticality = "🔴 Critical";
-    else if (averagePercent >= 40) criticality = "🟠 Semi-Critical";
+    if (riskPercent >= 60) criticality = "🔴 Critical";
+    else if (riskPercent >= 40) criticality = "🟠 Semi-Critical";
 
     const vendorName = document.getElementById("vendor-name").value;
     document.getElementById("result").innerHTML = `
       <h3>Results for: ${vendorName}</h3>
       <p><strong>Impact Score:</strong> ${totalImpactScore.toFixed(2)}</p>
       <p><strong>Likelihood Score:</strong> ${totalLikelihoodScore.toFixed(2)}</p>
-      <p><strong>Impact Risk %:</strong> ${riskPercentImpact.toFixed(1)}%</p>
-      <p><strong>Likelihood Risk %:</strong> ${riskPercentLikelihood.toFixed(1)}%</p>
+      <p><strong>Risk Score:</strong> ${riskScore.toFixed(2)}</p>
+      <p><strong>Risk Score %:</strong> ${riskPercent.toFixed(1)}%</p>
       <p><strong>Vendor Criticality:</strong> ${criticality}</p>
     `;
-  });
-});
-document.getElementById("result").innerHTML = `...`;
-const payload = {
-  timestamp: new Date().toISOString(),
-  vendorName: vendorName,
-  impactScore: totalImpactScore.toFixed(2),
-  likelihoodScore: totalLikelihoodScore.toFixed(2),
-  impactPercent: riskPercentImpact.toFixed(1),
-  likelihoodPercent: riskPercentLikelihood.toFixed(1),
-  criticality: criticality
-};
 
-fetch("https://script.google.com/macros/s/AKfycbzEljJdmQ7OkWOhoq95B1D69UPhiEIrHNfwUtOBHUqM2JfYJua581J4GG8oeu7dibgt/exec", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify(payload)
-})
-.then(res => res.text())
-.then(msg => {
-  console.log("Saved to Google Sheet:", msg);
-})
-.catch(err => {
-  console.error("Save failed:", err);
+    const payload = {
+      timestamp: new Date().toISOString(),
+      vendorName,
+      impactScore: totalImpactScore.toFixed(2),
+      likelihoodScore: totalLikelihoodScore.toFixed(2),
+      riskScore: riskScore.toFixed(2),
+      riskPercent: riskPercent.toFixed(1),
+      criticality
+    };
+
+    fetch("https://script.google.com/macros/s/AKfycbzEljJdmQ7OkWOhoq95B1D69UPhiEIrHNfwUtOBHUqM2JfYJua581J4GG8oeu7dibgt/exec", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(res => res.text())
+      .then(msg => console.log("Saved to Google Sheet:", msg))
+      .catch(err => console.error("Save failed:", err));
+  });
 });
