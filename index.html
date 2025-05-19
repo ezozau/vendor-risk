@@ -12,8 +12,25 @@
     <h1>Vendor Risk Assessment</h1>
 
     <form id="risk-form">
-      <label for="vendor-name">Vendor Name:</label>
-      <input type="text" id="vendor-name" name="vendor-name" required />
+      <div class="form-group">
+        <label for="function-select">Vendor Function:</label>
+        <select id="function-select" name="function-select" required>
+          <option value="">Select Function</option>
+          <option value="Flight Operations">Flight Operations</option>
+          <option value="Aircraft Maintenance & Engineering">Aircraft Maintenance & Engineering</option>
+          <option value="Ground Operations & Airport Services">Ground Operations & Airport Services</option>
+          <option value="IT & Technology">IT & Technology</option>
+          <option value="Customer Service & Guest Products">Customer Service & Guest Products</option>
+          <option value="Procurement & Supply Chain">Procurement & Supply Chain</option>
+          <option value="Corporate & Finance">Corporate & Finance</option>
+          <option value="Safety, Security, & Risk">Safety, Security, & Risk</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="vendor-name">Vendor Name:</label>
+        <input type="text" id="vendor-name" name="vendor-name" required />
+      </div>
 
       <div id="questions-container"></div>
 
